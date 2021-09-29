@@ -1,0 +1,33 @@
+{
+  "name": "miraktest-futaba",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "ssh://git@github.com/rokoucha/miraktest-futaba.git",
+  "author": "Rokoucha <git@rokoucha.net>",
+  "license": "MIT",
+  "packageManager": "yarn@3.0.2",
+  "devDependencies": {
+    "@purtuga/esm-webpack-plugin": "^1.5.0",
+    "@types/he": "^1.1.2",
+    "@types/node": "^16.10.2",
+    "esbuild": "^0.13.3",
+    "esbuild-loader": "^2.15.1",
+    "license-webpack-plugin": "^2.3.21",
+    "prettier": "^2.4.1",
+    "typescript": "^4.4.3",
+    "webpack": "^4",
+    "webpack-cli": "^4.8.0"
+  },
+  "dependencies": {
+    "@types/react": "^17.0.24",
+    "@types/react-dom": "^17.0.9",
+    "he": "^1.2.0",
+    "react": "^17.0.2",
+    "recoil": "^0.4.1",
+    "zod": "^3.9.5"
+  },
+  "scripts": {
+    "dev": "webpack --color -w",
+    "build": "webpack --color"
+  }
+}
