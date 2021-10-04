@@ -8,6 +8,8 @@ import type { SetterOrUpdater } from 'recoil'
 import type { Settings } from '../types/atom'
 import type { ZenzaCommentChat } from '../types/miraktest-zenza'
 
+const loggingName = 'Futaba Comment Provider' as const
+
 export type FutabaCommentProviderProps = {
   program: Program | null
   service: Service | null
@@ -37,7 +39,7 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
     try {
       futabaRef.current = new FutabaClient({ baseUrl: settings.baseUrl })
     } catch (error) {
-      console.error('Futaba Comment Provider', error)
+      console.error(loggingName, error)
     }
   }, [settings])
 
@@ -45,22 +47,22 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
     if (!futabaRef.current) return
 
     if (settings.baseUrl === '') {
-      console.warn('板が設定されていません')
+      console.warn(loggingName, '板が設定されていません')
       return
     }
 
     if (settings.keyword === '') {
-      console.warn('検索条件が設定されていません')
+      console.warn(loggingName, '検索条件が設定されていません')
       return
     }
 
     if (!setZenzaComment && !setDplayerComment) {
-      console.warn('コメントレンダラーがありません')
+      console.warn(loggingName, 'コメントレンダラーがありません')
       return
     }
 
     if (!service) {
-      console.warn('サービスが取得できていません')
+      console.warn(loggingName, 'サービスが取得できていません')
       return
     }
 
@@ -76,7 +78,7 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
       try {
         threads = await futaba.threads()
       } catch (e) {
-        console.error('Futaba Comment Provider', e)
+        console.error(loggingName, e)
         return
       }
 
@@ -87,7 +89,7 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
         .sort((a, b) => b.res.length - a.res.length)
         .slice(0, settings.maxStreams)
         .map((t, i) => {
-          console.info('Futaba Comment Provider', 'stream', i, t)
+          console.info(loggingName, 'stream', i, t)
           return useReturnAsync(
             futaba.stream({
               interval: settings.interval * 1000,
@@ -96,7 +98,7 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
           )
         })
 
-      console.info('Futaba Comment Provider', streams.length, 'streams')
+      console.info(loggingName, streams.length, 'streams')
 
       streamsRef.current = streams
     })()
@@ -104,10 +106,11 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
 
   return (
     <>
-      {streamsRef.current.map(([stream], index) => (
+      {streamsRef.current.map(([stream, result], index) => (
         <FutabaCommentStreamer
           id={index}
           key={index}
+          result={result}
           setDplayerComment={setDplayerComment}
           setRestart={setRestart}
           setZenzaComment={setZenzaComment}
