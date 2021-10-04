@@ -68,13 +68,14 @@ export class FutabaClient {
       throw new Error('Failed to fetch threads')
     }
 
+    const resErr = res.clone()
     const text = await res.text()
 
     let threads
     try {
       threads = threadsSchema.parse(JSON.parse(text))
     } catch (_) {
-      throw new Error(this.#decoder.decode(await res.arrayBuffer()))
+      throw new Error(this.#decoder.decode(await resErr.arrayBuffer()))
     }
 
     this.#threads = threads
@@ -105,13 +106,14 @@ export class FutabaClient {
       throw new Error('Failed to fetch responses')
     }
 
+    const resErr = res.clone()
     const text = await res.text()
 
     let thread
     try {
       thread = threadSchema.parse(JSON.parse(text))
     } catch (_) {
-      throw new Error(this.#decoder.decode(await res.arrayBuffer()))
+      throw new Error(this.#decoder.decode(await resErr.arrayBuffer()))
     }
 
     let index = this.#threads.res.findIndex(
