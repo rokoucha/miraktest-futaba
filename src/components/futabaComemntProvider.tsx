@@ -33,8 +33,12 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
   >([])
 
   useEffect(() => {
-    futabaRef.current = new FutabaClient({ baseUrl: settings.baseUrl })
-  }, [])
+    try {
+      futabaRef.current = new FutabaClient({ baseUrl: settings.baseUrl })
+    } catch (error) {
+      console.warn('Futaba Comment Provider', error)
+    }
+  }, [settings])
 
   useEffect(() => {
     if (!futabaRef.current) return
@@ -74,10 +78,15 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
           (t) => t.res[0].comment.search(new RegExp(settings.keyword)) >= 0,
         )
         .sort((a, b) => b.res.length - a.res.length)
-        .slice(0, 3)
+        .slice(0, settings.maxStreams)
         .map((t, i) => {
-          console.info('Futaba Comment Provider', 'stream', i, t.res[0].comment)
-          return useReturnAsync(futaba.stream({ res: t.res[0].resId }))
+          console.info('Futaba Comment Provider', 'stream', i, t)
+          return useReturnAsync(
+            futaba.stream({
+              interval: settings.interval * 1000,
+              res: t.res[0].resId,
+            }),
+          )
         })
 
       console.info('Futaba Comment Provider', streams.length, 'streams')
