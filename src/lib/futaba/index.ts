@@ -2,11 +2,14 @@ import { dirname, join } from 'path'
 import { sleep } from '../../utils'
 import { Threads, threadSchema, threadsSchema } from './schema'
 
+export const FETCH_INTERVAL_MS = 4000 as const // 操作が早すぎます あと2秒で再送できます
+
 export type { Response, Thread, Threads } from './schema'
 
 export class FutabaClient {
   #baseUrl: string
   #decoder: TextDecoder
+  #fetchedAt: Date
   #threads: Threads
 
   constructor({ baseUrl }: { baseUrl: string }) {
@@ -18,6 +21,7 @@ export class FutabaClient {
 
     this.#baseUrl = join(url.origin, dirname(url.pathname))
     this.#decoder = new TextDecoder('Shift_JIS')
+    this.#fetchedAt = new Date(0)
     this.#threads = {
       die: '',
       dielong: -2,
@@ -55,15 +59,35 @@ export class FutabaClient {
     }))
   }
 
+  async #fetch(
+    input: string,
+    init?: RequestInit | undefined,
+  ): Promise<Response> {
+    const elapsedTime = new Date().getTime() - this.#fetchedAt.getTime()
+
+    if (elapsedTime < FETCH_INTERVAL_MS) {
+      console.log('FutabaClient', 'throttling', elapsedTime, 'ms')
+
+      await sleep(FETCH_INTERVAL_MS)
+    }
+
+    const res = await fetch(join(this.#baseUrl, input), init)
+
+    this.#fetchedAt = new Date()
+
+    return res
+  }
+
   stats() {
     return {
       baseUrl: this.#baseUrl,
+      fetchedAt: this.#fetchedAt,
       threads: this.#threads.res.length,
     }
   }
 
   async threads() {
-    const res = await fetch(join(this.#baseUrl, 'futaba.php?mode=json'))
+    const res = await this.#fetch('futaba.php?mode=json')
     if (!res.ok) {
       throw new Error('Failed to fetch threads')
     }
@@ -99,9 +123,7 @@ export class FutabaClient {
       query.set(k, String(v))
     }
 
-    const res = await fetch(
-      join(this.#baseUrl, `futaba.php?mode=json&${query.toString()}`),
-    )
+    const res = await this.#fetch(`futaba.php?mode=json&${query.toString()}`)
     if (!res.ok) {
       throw new Error('Failed to fetch responses')
     }
@@ -161,9 +183,15 @@ export class FutabaClient {
     return thread
   }
 
-  async *stream({ interval = 5000, res }: { interval?: number; res: number }) {
-    if (interval < 5000) {
-      throw new Error('Too fast(5000ミリ秒以上にしなさい)')
+  async *stream({
+    interval = FETCH_INTERVAL_MS,
+    res,
+  }: {
+    interval?: number
+    res: number
+  }) {
+    if (interval < FETCH_INTERVAL_MS) {
+      throw new Error(`Too fast(${FETCH_INTERVAL_MS}ミリ秒以上にしなさい)`)
     }
 
     let thread = await this.responses({ res })

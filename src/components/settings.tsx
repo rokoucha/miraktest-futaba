@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import type { SetterOrUpdater } from 'recoil'
+import { FETCH_INTERVAL_MS } from '../lib/futaba'
 import type { Settings as TSettings } from '../types/atom'
 
 const toNum = (n: string) => Number.parseInt(n, 10)
@@ -13,6 +14,8 @@ export const Settings: React.VFC<SettingsProps> = ({
   setSettings,
   settings,
 }) => {
+  const minInterval = FETCH_INTERVAL_MS / 1000
+
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl)
   const [enabled, setEnabled] = useState(settings.enabled)
   const [interval, setInterval] = useState(settings.interval)
@@ -69,11 +72,11 @@ export const Settings: React.VFC<SettingsProps> = ({
             <label>
               <span>ポーリング間隔(秒)</span>
               <input
-                min="3"
+                min={minInterval}
                 onChange={(e) => setInterval(toNum(e.target.value))}
-                placeholder="3"
+                placeholder={String(minInterval)}
                 type="number"
-                value={interval ?? 3}
+                value={interval ?? minInterval}
               />
             </label>
           </div>
