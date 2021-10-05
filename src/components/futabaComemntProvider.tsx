@@ -1,4 +1,4 @@
-import { FutabaClient, Response } from '../lib/futaba'
+import { FutabaClient, Response, Threads } from '../lib/futaba'
 import { FutabaCommentStreamer } from './futabaCommentStreamer'
 import { useReturnAsync } from '../utils'
 import React, { useEffect, useRef, useState } from 'react'
@@ -44,6 +44,10 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
   }, [settings])
 
   useEffect(() => {
+    streamsRef.current = []
+  }, [restart])
+
+  useEffect(() => {
     if (!futabaRef.current) return
 
     if (settings.baseUrl === '') {
@@ -75,11 +79,14 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
 
     ;(async () => {
       let threads
-      try {
-        threads = await futaba.threads()
-      } catch (e) {
-        console.error(loggingName, e)
-        return
+      while (threads === undefined) {
+        console.log(loggingName, 'trying to fetch threads...')
+        try {
+          threads = await futaba.threads()
+          break
+        } catch (e) {
+          console.error(loggingName, e)
+        }
       }
 
       streams = threads.res
@@ -98,7 +105,7 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
           )
         })
 
-      console.info(loggingName, streams.length, 'streams')
+      console.info(loggingName, streams.length, 'streams ready')
 
       streamsRef.current = streams
     })()
@@ -112,7 +119,7 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
           key={index}
           result={result}
           setDplayerComment={setDplayerComment}
-          setRestart={setRestart}
+          restart={() => setRestart((restart) => !restart)}
           setZenzaComment={setZenzaComment}
           stream={stream}
         />

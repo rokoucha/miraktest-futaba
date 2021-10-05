@@ -8,18 +8,18 @@ const loggingName = 'Futaba Comment Streamer' as const
 
 type FutabaCommentStreamerProps = {
   id: number
+  restart: () => any
   result: () => string | undefined
   setDplayerComment: SetterOrUpdater<DPlayerCommentPayload> | null
-  setRestart: React.Dispatch<React.SetStateAction<boolean>>
   setZenzaComment: SetterOrUpdater<ZenzaCommentChat> | null
   stream: AsyncGenerator<Response, void, undefined>
 }
 
 export const FutabaCommentStreamer: React.VFC<FutabaCommentStreamerProps> = ({
   id,
+  restart,
   result,
   setDplayerComment,
-  setRestart,
   setZenzaComment,
   stream,
 }) => {
@@ -63,15 +63,15 @@ export const FutabaCommentStreamer: React.VFC<FutabaCommentStreamerProps> = ({
       } finally {
         console.info(loggingName, id, 'closed by remote', result())
 
-        setRestart(true)
+        restart()
       }
     })()
 
     return () => {
-      console.info(loggingName, id, 'closed by provider')
+      console.info(loggingName, id, 'closed by provider', result())
       stream.return()
 
-      setRestart(true)
+      restart()
     }
   })
 
