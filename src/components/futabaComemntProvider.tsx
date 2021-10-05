@@ -1,4 +1,4 @@
-import { FutabaClient, Response, Threads } from '../lib/futaba'
+import { FutabaClient, Response } from '../lib/futaba'
 import { FutabaCommentStreamer } from './futabaCommentStreamer'
 import { useReturnAsync } from '../utils'
 import React, { useEffect, useRef, useState } from 'react'
@@ -30,10 +30,33 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
   }, [])
 
   const futabaRef = useRef<FutabaClient | null>(null)
-  const streamsRef = useRef<
-    [AsyncGenerator<Response, void, undefined>, () => string | undefined][]
+  const [streams, setStreams] = useState<
+    {
+      close: () => void
+      id: number
+      result: () => string | undefined
+      stream: AsyncGenerator<Response, void, undefined>
+    }[]
   >([])
-  const [restart, setRestart] = useState(false)
+
+  const closeRequest = (id: number): [() => boolean, () => void] => {
+    let closing = false
+
+    return [
+      () => closing,
+      () => {
+        closing = true
+        setStreams(streams.filter((s) => s.id !== id))
+
+        console.info(
+          loggingName,
+          'closed by request',
+          id,
+          streams.map((s) => s.id),
+        )
+      },
+    ]
+  }
 
   useEffect(() => {
     try {
@@ -44,10 +67,7 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
   }, [settings])
 
   useEffect(() => {
-    streamsRef.current = []
-  }, [restart])
-
-  useEffect(() => {
+    setStreams([])
     if (!futabaRef.current) return
 
     if (settings.baseUrl === '') {
@@ -72,12 +92,17 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
 
     const futaba = futabaRef.current
 
-    let streams: [
-      AsyncGenerator<Response, void, undefined>,
-      () => string | undefined,
-    ][] = []
-
     ;(async () => {
+      if (streams.length > 0) {
+        console.log(loggingName, 'reset streams')
+
+        for (const { close } of streams) {
+          close()
+        }
+
+        setStreams([])
+      }
+
       let threads
       while (threads === undefined) {
         console.log(loggingName, 'trying to fetch threads...')
@@ -89,41 +114,59 @@ export const FutabaCommentProvider: React.VFC<FutabaCommentProviderProps> = ({
         }
       }
 
-      streams = threads.res
-        .filter(
-          (t) => t.res[0].comment.search(new RegExp(settings.keyword)) >= 0,
-        )
-        .sort((a, b) => b.res.length - a.res.length)
-        .slice(0, settings.maxStreams)
-        .map((t, i) => {
-          console.info(loggingName, 'stream', i, t)
-          return useReturnAsync(
-            futaba.stream({
-              interval: settings.interval * 1000,
-              res: t.res[0].resId,
-            }),
+      setStreams(
+        threads.res
+          .filter(
+            (t) => t.res[0].comment.search(new RegExp(settings.keyword)) >= 0,
           )
-        })
+          .sort((a, b) => b.res.length - a.res.length)
+          .slice(0, settings.maxStreams)
+          .map((t, i, s) => {
+            const id = new Date().getTime()
+            console.info(loggingName, 'stream', i, 'as', id, t)
 
-      console.info(loggingName, streams.length, 'streams ready')
+            const [close, closer] = closeRequest(id)
 
-      streamsRef.current = streams
+            const [stream, result] = useReturnAsync(
+              futaba.stream({
+                close,
+                id,
+                interval: settings.interval * s.length,
+                res: t.res[0].resId,
+              }),
+            )
+
+            return {
+              close: closer,
+              id,
+              result,
+              stream,
+            }
+          }),
+      )
+
+      console.info(loggingName, 'ready', streams.length, 'streams')
     })()
-  }, [program, service, settings, restart])
+  }, [program, service, settings])
 
   return (
     <>
-      {streamsRef.current.map(([stream, result], index) => (
-        <FutabaCommentStreamer
-          id={index}
-          key={index}
-          result={result}
-          setDplayerComment={setDplayerComment}
-          restart={() => setRestart((restart) => !restart)}
-          setZenzaComment={setZenzaComment}
-          stream={stream}
-        />
-      ))}
+      {streams.map(({ id, stream, result, close }, index) => {
+        console.info(loggingName, 'fork', id, 'stream')
+
+        return (
+          <FutabaCommentStreamer
+            close={close}
+            delay={settings.interval * index}
+            id={id}
+            key={index}
+            result={result}
+            setDplayerComment={setDplayerComment}
+            setZenzaComment={setZenzaComment}
+            stream={stream}
+          />
+        )
+      })}
     </>
   )
 }

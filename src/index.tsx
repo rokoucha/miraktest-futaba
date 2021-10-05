@@ -19,9 +19,9 @@ const main: InitPlugin = {
       default: {
         baseUrl: '',
         enabled: true,
-        interval: 5,
+        interval: 5000,
         keyword: '',
-        maxStreams: 3,
+        maxStreams: 1,
       },
     })
 

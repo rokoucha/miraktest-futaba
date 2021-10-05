@@ -14,8 +14,6 @@ export const Settings: React.VFC<SettingsProps> = ({
   setSettings,
   settings,
 }) => {
-  const minInterval = FETCH_INTERVAL_MS / 1000
-
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl)
   const [enabled, setEnabled] = useState(settings.enabled)
   const [interval, setInterval] = useState(settings.interval)
@@ -70,13 +68,13 @@ export const Settings: React.VFC<SettingsProps> = ({
           <h2>上級者向け設定(分からないならいじるな)</h2>
           <div>
             <label>
-              <span>ポーリング間隔(秒)</span>
+              <span>ポーリング間隔(ミリ秒)</span>
               <input
-                min={minInterval}
+                min={FETCH_INTERVAL_MS}
                 onChange={(e) => setInterval(toNum(e.target.value))}
-                placeholder={String(minInterval)}
+                placeholder={String(FETCH_INTERVAL_MS)}
                 type="number"
-                value={interval ?? minInterval}
+                value={interval ?? FETCH_INTERVAL_MS}
               />
             </label>
           </div>
@@ -84,11 +82,11 @@ export const Settings: React.VFC<SettingsProps> = ({
             <label>
               <span>最大ストリーム数</span>
               <input
-                max="5"
+                max="3"
                 onChange={(e) => setMaxStreams(toNum(e.target.value))}
-                placeholder="3"
+                placeholder="1"
                 type="number"
-                value={maxStreams ?? 3}
+                value={maxStreams ?? 1}
               />
             </label>
           </div>

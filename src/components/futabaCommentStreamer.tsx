@@ -1,14 +1,17 @@
+import { FETCH_INTERVAL_MS } from '../lib/futaba'
+import { sleep } from '../utils'
 import React, { useEffect } from 'react'
-import type { SetterOrUpdater } from 'recoil'
-import type { Response } from '../lib/futaba/schema'
 import type { DPlayerCommentPayload } from '../types/miraktest-dplayer'
+import type { Response } from '../lib/futaba/schema'
+import type { SetterOrUpdater } from 'recoil'
 import type { ZenzaCommentChat } from '../types/miraktest-zenza'
 
 const loggingName = 'Futaba Comment Streamer' as const
 
 type FutabaCommentStreamerProps = {
+  close: () => void
+  delay: number
   id: number
-  restart: () => any
   result: () => string | undefined
   setDplayerComment: SetterOrUpdater<DPlayerCommentPayload> | null
   setZenzaComment: SetterOrUpdater<ZenzaCommentChat> | null
@@ -16,16 +19,20 @@ type FutabaCommentStreamerProps = {
 }
 
 export const FutabaCommentStreamer: React.VFC<FutabaCommentStreamerProps> = ({
+  close,
+  delay,
   id,
-  restart,
   result,
   setDplayerComment,
   setZenzaComment,
   stream,
 }) => {
   useEffect(() => {
-    console.info(loggingName, id, 'open')
     ;(async () => {
+      await sleep(delay)
+
+      console.info(loggingName, id, 'open', delay, 'ms')
+
       try {
         for await (const response of stream) {
           console.info(loggingName, id, response.comment)
@@ -56,22 +63,18 @@ export const FutabaCommentStreamer: React.VFC<FutabaCommentStreamerProps> = ({
             })
           }
         }
+
+        console.info(loggingName, id, 'closed by client', result())
       } catch (e) {
-        console.error(loggingName, id, e)
-
-        stream.return()
+        console.error(loggingName, id, 'closed by error', e)
       } finally {
-        console.info(loggingName, id, 'closed by remote', result())
-
-        restart()
+        close()
       }
     })()
 
     return () => {
       console.info(loggingName, id, 'closed by provider', result())
-      stream.return()
-
-      restart()
+      close()
     }
   })
 

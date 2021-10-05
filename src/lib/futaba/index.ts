@@ -207,9 +207,13 @@ export class FutabaClient {
   }
 
   async *stream({
+    close,
+    id = 0,
     interval = FETCH_INTERVAL_MS,
     res,
   }: {
+    close?: () => boolean
+    id?: number
     interval?: number
     res: number
   }) {
@@ -222,8 +226,17 @@ export class FutabaClient {
     let start = thread.res.slice(-1)[0].resId
     let streaming = thread.maxres === ''
 
+    console.log('FutabaClient', 'connected', id)
+
     while (streaming) {
+      if (close && close()) {
+        thread.maxres = 'closed by signal'
+        break
+      }
+
       await sleep(interval)
+
+      console.log('FutabaClient', 'streaming', res, id)
 
       thread = await this.responses({ res, start })
       start = thread.res.slice(-1)[0].resId
@@ -231,6 +244,8 @@ export class FutabaClient {
 
       yield* thread.res.slice(1)
     }
+
+    console.log('FutabaClient', 'disconnected', id)
 
     return thread.maxres
   }
