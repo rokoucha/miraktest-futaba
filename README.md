@@ -5,8 +5,11 @@
 
 ## How to use
 
-`miraktest-futaba.plugin.js` を MirakTest のプラグインフォルダに入れてください。
-既に MirakTest を起動している場合はインストール後に再起動が必要です。
+1. `miraktest-futaba.plugin.js` を MirakTest のプラグインフォルダに入れてください。
+   既に MirakTest を起動している場合はインストール後に再起動が必要です。
+2. MirakTest の設定で「ふたば ☆ ちゃんねるからコメントを取得」を開き、板のアドレスを入れてください。(`~.htm` の形式です)
+3. スレの検索条件を正規表現で指定してください。
+4. 設定を保存すると、自動でスレ検索して取得し始めます
 
 ## How to build
 
