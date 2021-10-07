@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import type { SetterOrUpdater } from 'recoil'
 import { FETCH_INTERVAL_MS } from '../lib/futaba'
-import type { Settings as TSettings } from '../types/atom'
+import type { Settings as TSettings } from '../atom'
 
 const toNum = (n: string) => Number.parseInt(n, 10)
 
@@ -83,6 +83,7 @@ export const Settings: React.VFC<SettingsProps> = ({
               <span>最大ストリーム数</span>
               <input
                 max="3"
+                min="0"
                 onChange={(e) => setMaxStreams(toNum(e.target.value))}
                 placeholder="1"
                 type="number"
