@@ -1,11 +1,11 @@
 import { FutabaClient, Response } from '../lib/futaba'
-import { FutabaCommentStreamer } from './futabaCommentStreamer'
+import { FutabaCommentStreamer } from './futabaCommentStream'
 import { useReturnAsync } from '../utils'
 import React, { useEffect, useRef, useState } from 'react'
 import type { DPlayerCommentPayload } from '../types/miraktest-dplayer'
 import type { Service, Program } from '../types/plugin'
 import type { SetterOrUpdater } from 'recoil'
-import type { Settings } from '../types/atom'
+import type { Settings } from '../atom'
 import type { ZenzaCommentChat } from '../types/miraktest-zenza'
 
 const loggingName = 'Futaba Comment Provider' as const

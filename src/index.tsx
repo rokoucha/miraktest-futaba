@@ -1,29 +1,19 @@
-import { atom, useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil'
+import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil'
+import { Catalogue } from './components/catalogue'
+import { catalogueWindowId, meta, prefix } from './constants'
+import { FutabaCommentProvider } from './components/futabaCommentProvider'
 import { RecoilState } from 'recoil'
-import { FutabaCommentProvider } from './components/futabaComemntProvider'
-import { meta, prefix } from './constants'
 import { Settings } from './components/settings'
-import React from 'react'
+import React, { useEffect } from 'react'
 import type { Atom, InitPlugin } from './types/plugin'
 import type { DPlayerCommentPayload } from './types/miraktest-dplayer'
-import type { Settings as TSettings } from './types/atom'
+import { settingsAtom } from './atom'
 import type { ZenzaCommentChat } from './types/miraktest-zenza'
 
 const main: InitPlugin = {
-  renderer: ({ appInfo, packages, atoms }) => {
+  renderer({ appInfo, packages, functions, atoms }) {
     const remote = packages.Electron
     const remoteWindow = remote.getCurrentWindow()
-
-    const settingsAtom = atom<TSettings>({
-      key: `${prefix}.settings`,
-      default: {
-        baseUrl: '',
-        enabled: true,
-        interval: 5000,
-        keyword: '',
-        maxStreams: 1,
-      },
-    })
 
     let zenzaCommentAtom: RecoilState<ZenzaCommentChat> | null = null
     let dplayerCommentAtom: RecoilState<DPlayerCommentPayload> | null = null
@@ -78,7 +68,7 @@ const main: InitPlugin = {
           id: `${prefix}.settings`,
           position: 'onSetting',
           label: meta.name,
-          component: () => {
+          component() {
             const [settings, setSettings] = useRecoilState(settingsAtom)
 
             return <Settings setSettings={setSettings} settings={settings} />
@@ -87,7 +77,7 @@ const main: InitPlugin = {
         {
           id: `${prefix}.onPlayer`,
           position: 'onPlayer',
-          component: () => {
+          component() {
             const program = useRecoilValue(atoms.contentPlayerProgramSelector)
             const service = useRecoilValue(atoms.contentPlayerServiceSelector)
             const settings = useRecoilValue(settingsAtom)
@@ -116,17 +106,68 @@ const main: InitPlugin = {
       destroy() {
         return
       },
-      windows: {},
+      contextMenu: {
+        label: 'カタログ@ふたば',
+        click() {
+          functions.openWindow({
+            name: catalogueWindowId,
+            isSingletone: true,
+            args: {
+              width: 600,
+              height: 400,
+            },
+          })
+        },
+      },
+      windows: {
+        [catalogueWindowId]() {
+          const program = useRecoilValue(atoms.contentPlayerProgramSelector)
+          const service = useRecoilValue(atoms.contentPlayerServiceSelector)
+          const settings = useRecoilValue(settingsAtom)
+
+          useEffect(() => {
+            remoteWindow.setTitle(`カタログ@ふたば - ${appInfo.name}`)
+
+            const cookieJar = remote.session.defaultSession.cookies
+            cookieJar.set({
+              url: new URL(settings.baseUrl).origin,
+              name: 'cxyl',
+              value: '500x1x4x0x1',
+            })
+          }, [])
+
+          return (
+            <Catalogue
+              program={program}
+              service={service}
+              settings={settings}
+            />
+          )
+        },
+      },
     }
   },
-  main: () => {
+  main({ functions }) {
     return {
       ...meta,
-      setup: () => {
+      setup() {
         return
       },
-      destroy: () => {
+      destroy() {
         return
+      },
+      appMenu: {
+        label: 'カタログ@ふたば',
+        click() {
+          functions.openWindow({
+            name: catalogueWindowId,
+            isSingletone: true,
+            args: {
+              width: 600,
+              height: 400,
+            },
+          })
+        },
       },
     }
   },

@@ -1,4 +1,3 @@
-import { FETCH_INTERVAL_MS } from '../lib/futaba'
 import { sleep } from '../utils'
 import React, { useEffect } from 'react'
 import type { DPlayerCommentPayload } from '../types/miraktest-dplayer'

@@ -1,3 +1,4 @@
+import { decode } from 'he'
 import { dirname, join } from 'path'
 import { sleep } from '../../utils'
 import { Threads, threadSchema, threadsSchema } from './schema'
@@ -6,6 +7,16 @@ export const FETCH_INTERVAL_MS = 3000 as const
 export const RETRY_MAX = 5 as const
 
 export type { Response, Thread, Threads } from './schema'
+
+export type Sort = 1 | 2 | 3 | 6 | 4 | 8 | 7 | 9
+
+export type CatalogueThread = {
+  alt: string
+  comment: string
+  count: number
+  res: number
+  thumbnail?: string
+}
 
 export class FutabaClient {
   #baseUrl: string
@@ -39,9 +50,8 @@ export class FutabaClient {
   static async getTextboards(bbsmenu = 'https://www.2chan.net/bbsmenu.html') {
     const bbsmenuUrl = new URL(bbsmenu)
 
-    const regex = new RegExp(
-      /<a href="(.+\/(?:futaba|guro2-enter|enter|51enter)\.html?)" target="cont">(?:<[^>]+>)?([^<]+)(?:<[^>]+>)?<\/a>/g,
-    )
+    const regex =
+      /<a href="(.+\/(?:futaba|guro2-enter|enter|51enter)\.html?)" target="cont">(?:<[^>]+>)?([^<]+)(?:<[^>]+>)?<\/a>/g
 
     const res = await fetch(bbsmenuUrl.href)
     if (!res.ok) {
@@ -106,7 +116,7 @@ export class FutabaClient {
     this.#fetchedAt = new Date()
 
     if (!res.headers.get('Content-Type')?.startsWith('application/json')) {
-      const message = this.#decoder.decode(await res.arrayBuffer())
+      const message = this.#decoder.decode(await res.clone().arrayBuffer())
 
       if (
         /操作が早すぎます あと2秒で再送できます/g.test(message) &&
@@ -118,11 +128,63 @@ export class FutabaClient {
 
         return this.#fetch(input, init, retry)
       }
-
-      throw new Error(message)
     }
 
     return res
+  }
+
+  async catalogue(params: { sort?: Sort; guid?: 'on' }) {
+    if (params.sort === 9 && params.guid !== 'on') {
+      throw new Error('guid must be set to "on"')
+    }
+
+    const query = new URLSearchParams()
+    query.set('mode', 'cat')
+
+    for (const [k, v] of Object.entries(params)) {
+      query.set(k, String(v))
+    }
+
+    const res = await this.#fetch(`futaba.php?${query.toString()}`)
+    if (!res.ok) {
+      throw new Error('Failed to fetch catalogue')
+    }
+
+    const text = this.#decoder.decode(await res.arrayBuffer())
+
+    const title = text.match(/<span id="tit">([^<]+)<\/span>/)
+    if (!title) throw new Error('Failed to match title')
+
+    const threadRegEx =
+      /<td><a href='res\/(\d+)\.htm' target='_blank'>(?:<img src='(.+)' border=0 width=\d+ height=\d+ alt="(.*)" loading="lazy">|<small>(.*)<\/small>)?<\/a><br>(?:<small>(.+)<\/small><br>)?<font size=2>(\d+)<\/font><\/td>/g
+
+    const threads = Array.from(text.matchAll(threadRegEx))
+
+    if (threads.length < 7) throw new Error('Failed to match threads')
+
+    return {
+      threads: threads.map(
+        ([
+          _,
+          res,
+          thumbnail,
+          alt,
+          comment1,
+          comment2,
+          count,
+        ]): CatalogueThread => ({
+          alt: alt,
+          comment: decode(comment1 !== undefined ? comment1 : comment2),
+          count: Number.parseInt(count, 10),
+          res: Number.parseInt(res, 10),
+          thumbnail:
+            thumbnail !== undefined
+              ? new URL(thumbnail, this.#baseUrl).href
+              : undefined,
+        }),
+      ),
+      title: title[1],
+    }
   }
 
   async threads() {
